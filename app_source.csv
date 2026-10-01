@@ -1,0 +1,223 @@
+app_py_source_code
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+from datetime import datetime
+""
+# Page Setup
+"st.set_page_config(page_title=""Grade 12 Physics Virtual Sandbox"", layout=""wide"")"
+"st.title(""🔬 Grade 12 Physics Interactive Lab Portal"")"
+"st.write(""Perform your computational experiments below. Adjust input variables, record observations, and download your data logs."")"
+""
+# Lab Selection
+lab_selection = st.sidebar.radio(
+"    ""Select Lab Bench"","
+"    [""Experiment 1: Projectile Trajectory Sandbox"", ""Experiment 2: Hooke's Law Measurement & Regression""]"
+)
+""
+# Initialize Session State Arrays to maintain student data logs persistently across web refreshes
+if 'projectile_trials' not in st.session_state:
+    st.session_state.projectile_trials = []
+if 'hookes_data' not in st.session_state:
+    st.session_state.hookes_data = []
+""
+# Global Student Metadata Header Component
+"st.sidebar.markdown(""---"")"
+"st.sidebar.subheader(""👤 Student Identification"")"
+"student_name = st.sidebar.text_input(""Full Name"", placeholder=""Enter your name here"")"
+"student_class = st.sidebar.text_input(""Class Section"", placeholder=""e.g., Grade 12A"")"
+""
+# ----------------------------------------------------
+# LAB 1: PROJECTILE MOTION SANDBOX
+# ----------------------------------------------------
+"if lab_selection == ""Experiment 1: Projectile Trajectory Sandbox"":"
+"    st.header(""🎯 Projectile Motion Vector Sandbox"")"
+"    st.markdown(""🧪 **Objective:** Analyze how changes in launch velocity ($v_0$), angle ($\\theta$), and gravitational environments affect the overall flight path."")"
+    
+    # Inputs Column
+"    with st.sidebar.expander(""🛠️ Control Panel (Inputs)"", expanded=True):"
+"        trial_name = st.text_input(""Trial Label"", value=f""Trial {len(st.session_state.projectile_trials) + 1}"")"
+"        v0 = st.slider(""Launch Velocity (v₀) [m/s]"", 5.0, 40.0, 20.0, 1.0)"
+"        angle = st.slider(""Launch Angle (θ) [Degrees]"", 15, 90, 45, 5)"
+"        g = st.selectbox(""Select Gravitational Environment (g)"", "
+"                         [9.81, 1.62, 3.71, 24.79], "
+"                         format_func=lambda x: f""Earth ({x} m/s²)"" if x==9.81 else f""Moon ({x} m/s²)"" if x==1.62 else f""Mars ({x} m/s²)"" if x==3.71 else f""Jupiter ({x} m/s²)"")"
+""
+    # Computations Engine
+    theta_rad = np.radians(angle)
+    t_flight = (2 * v0 * np.sin(theta_rad)) / g
+"    t_array = np.linspace(0, t_flight, 300)"
+    x_coords = v0 * np.cos(theta_rad) * t_array
+    y_coords = (v0 * np.sin(theta_rad) * t_array) - (0.5 * g * t_array**2)
+    
+    max_range = (v0**2 * np.sin(2 * theta_rad)) / g
+    max_height = (v0**2 * (np.sin(theta_rad))**2) / (2 * g)
+""
+    # Real-Time Observation Panels
+"    st.subheader(""👀 Real-Time Instrument Readings"")"
+"    m1, m2, m3 = st.columns(3)"
+"    m1.metric(""Calculated Flight Time"", f""{t_flight:.2f} seconds"")"
+"    m2.metric(""Observed Peak Altitude"", f""{max_height:.2f} meters"")"
+"    m3.metric(""Observed Total Range"", f""{max_range:.2f} meters"")"
+""
+    # Action Control Buttons
+"    st.markdown(""### Data Logging Controls"")"
+"    col_btn1, col_btn2 = st.columns(2)"
+    with col_btn1:
+"        if st.button(""💾 Record This Trial to Ledger""):"
+            st.session_state.projectile_trials.append({
+"                'Label': trial_name,"
+"                'v0': v0,"
+"                'Angle': angle,"
+"                'g': g,"
+"                'Time': round(t_flight, 2),"
+"                'Height': round(max_height, 2),"
+"                'Range': round(max_range, 2),"
+"                'x': x_coords,"
+                'y': y_coords
+            })
+"            st.success(f""Recorded data parameters for {trial_name} into system matrix!"")"
+    with col_btn2:
+"        if st.button(""🗑️ Clear Local Laboratory Logs""):"
+            st.session_state.projectile_trials = []
+            st.rerun()
+""
+    # Visual Output Workspace Plot
+"    st.subheader(""📊 Graphical Flight Analyzer"")"
+"    fig, ax = plt.subplots(figsize=(10, 4.5))"
+"    ax.plot(x_coords, y_coords, color=""#9E9E9E"", linestyle="":"", label=""Live Sandbox Workspace Cursor"")"
+    
+    for trial in st.session_state.projectile_trials:
+"        ax.plot(trial['x'], trial['y'], linewidth=2.5, label=f""{trial['Label']} ({trial['Range']}m)"")"
+"        ax.scatter([trial['Range']], [0], s=60, zorder=5)"
+""
+"    ax.set_xlabel(""Horizontal Distance (meters)"")"
+"    ax.set_ylabel(""Vertical Height (meters)"")"
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+"    ax.grid(True, linestyle=""--"", alpha=0.5)"
+"    ax.legend(loc=""upper right"")"
+    st.pyplot(fig)
+""
+    # Output Data Book Ledger
+    if st.session_state.projectile_trials:
+"        st.subheader(""📋 Recorded Data Book"")"
+        clean_table = [{
+"            ""Trial"": t['Label'], ""v₀ (m/s)"": t['v0'], ""Angle (°)"": t['Angle'], "
+"            ""Gravity (m/s²)"": t['g'], ""Flight Time (s)"": t['Time'], "
+"            ""Max Height (m)"": t['Height'], ""Total Range (m)"": t['Range']"
+        } for t in st.session_state.projectile_trials]
+        st.table(clean_table)
+""
+        # Generate Printable Text File Data Packet
+"        report_text = f""LABORATORY EXERCISE REPORT: PROJECTILE MOTION\\n"""
+"        report_text += f""Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\\n"""
+"        report_text += f""Student Name: {student_name if student_name else 'UNSPECIFIED'}\\n"""
+"        report_text += f""Class: {student_class if student_class else 'UNSPECIFIED'}\\n"""
+"        report_text += f""=""*50 + ""\\n\\n RECORDED EXPERIMENTAL MATRIX DATA:\\n\\n"""
+        for t in clean_table:
+"            report_text += f""[{t['Trial']}] Inital v0: {t['v₀ (m/s)']} m/s | Angle: {t['Angle (°)']}° | Gravity: {t['Gravity (m/s²)']} m/s²\\n"""
+"            report_text += f""         ==> Flight Time: {t['Flight Time (s)']} s | Peak H: {t['Max Height (m)']} m | Range: {t['Total Range (m)']} m\\n"""
+"            report_text += ""-""*40 + ""\\n"""
+        
+        st.download_button(
+"            label=""📥 Download Data Report File (.txt)"","
+"            data=report_text,"
+"            file_name=f""projectile_motion_report_{student_name.replace(' ', '_')}.txt"","
+"            mime=""text/plain"""
+        )
+""
+# ----------------------------------------------------
+# LAB 2: HOOKE'S LAW DATA LOGGING BENCH
+# ----------------------------------------------------
+"elif lab_selection == ""Experiment 2: Hooke's Law Measurement & Regression"":"
+"    st.header(""🪓 Virtual Hooke's Law Spring Bench"")"
+"    st.markdown(""🧪 **Objective:** Gather extension metrics from a physical spring loading sequence, map data arrays, and run least-squares linear regressions to resolve the spring constant ($k$)."")"
+""
+"    col_bench1, col_bench2 = st.columns()"
+""
+    with col_bench1:
+"        st.subheader(""1. Virtual Physical Bench Controls"")"
+"        st.info(""Select a mass profile below to hang onto the spring array. Record the resulting positional extension."")"
+        
+"        mass_input = st.slider(""Select Hanging Mass Profile (kg)"", 0.0, 1.0, 0.2, 0.05)"
+        
+        # Hardcoded realistic system settings alongside artificial micro-parallax measurement noise metrics
+        true_k = 42.50
+"        noise = np.random.normal(0, 0.0018)"
+        calculated_extension = ((mass_input * 9.81) / true_k) + (0.0 if mass_input == 0 else noise)
+        
+"        st.metric(""Observed System Extension Line (x)"", f""{max(0.0, calculated_extension):.4f} meters"")"
+        
+"        col_act1, col_act2 = st.columns(2)"
+        with col_act1:
+"            if st.button(""📝 Log Entry to Ledger""):"
+                force_val = mass_input * 9.81
+                st.session_state.hookes_data.append({
+"                    'Trial Number': len(st.session_state.hookes_data) + 1,"
+"                    'Mass (kg)': round(mass_input, 3),"
+"                    'Applied Load Force (N)': round(force_val, 3),"
+"                    'Spring Extension (m)': round(max(0.0, calculated_extension), 4)"
+                })
+"                st.success(f""Trial logged: Added mass parameter load of {mass_input}kg"")"
+        with col_act2:
+"            if st.button(""🗑️ Reset Ledger Arrays""):"
+                st.session_state.hookes_data = []
+                st.rerun()
+""
+    with col_bench2:
+"        st.subheader(""2. Electronic Lab Data Book & Statistical Regression"")"
+        
+        if len(st.session_state.hookes_data) < 3:
+"            st.warning(""⚠️ Data Capture Incomplete. Log at least **3 distinct loading vectors** to activate the linear regression graphing tools."")"
+            if st.session_state.hookes_data:
+                st.table(st.session_state.hookes_data)
+        else:
+            x_vals = np.array([d['Spring Extension (m)'] for d in st.session_state.hookes_data])
+            y_vals = np.array([d['Applied Load Force (N)'] for d in st.session_state.hookes_data])
+            
+            # Fast Linear Regression Calculation via Least-Squares Matrix Engine
+"            slope, intercept = np.polyfit(x_vals, y_vals, 1)"
+            
+"            mc1, mc2 = st.columns(2)"
+"            mc1.metric(""Calculated Spring Constant (k)"", f""{slope:.2f} N/m"")"
+"            mc2.metric(""Calculated Y-Intercept Error"", f""{intercept:.4f} N"")"
+            
+            # Plot Component Architecture
+"            fig, ax = plt.subplots(figsize=(8, 4))"
+"            ax.scatter(x_vals, y_vals, color=""#D81B60"", s=80, label=""Log Points Matrix"", zorder=3)"
+            
+"            x_line = np.linspace(0, max(x_vals)*1.2, 100)"
+            y_line = slope * x_line + intercept
+"            ax.plot(x_line, y_line, color=""#2E7D32"", linestyle=""--"", label=f""Fit Vector Line (k={slope:.1f})"")"
+            
+"            ax.set_xlabel(""Displacement Extension, x (meters)"")"
+"            ax.set_ylabel(""Applied Load Structural Force, F (Newtons)"")"
+            ax.set_xlim(left=0)
+            ax.set_ylim(bottom=0)
+"            ax.grid(True, linestyle="":"", alpha=0.5)"
+            ax.legend()
+            st.pyplot(fig)
+            
+            st.table(st.session_state.hookes_data)
+""
+            # Export Hooke's Law Log File Text Generator
+"            report_text = f""LABORATORY EXERCISE REPORT: HOOKE'S LAW ANALYSIS\\n"""
+"            report_text += f""Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\\n"""
+"            report_text += f""Student Name: {student_name if student_name else 'UNSPECIFIED'}\\n"""
+"            report_text += f""Class: {student_class if student_class else 'UNSPECIFIED'}\\n"""
+"            report_text += f""=""*50 + ""\\n"""
+"            report_text += f""ANALYSIS HIGHLIGHTS:\\n"""
+"            report_text += f""-> Resolved Hooke Constant (k): {slope:.3f} N/m\\n"""
+"            report_text += f""-> System Sensor Offset Intercept: {intercept:.4f} N\\n"""
+"            report_text += f""=""*50 + ""\\n\\n RECORDED EXPERIMENTAL DATA:\\n\\n"""
+"            report_text += f""Trial | Mass (kg) | Force (N) | Extension (m)\\n"""
+            for d in st.session_state.hookes_data:
+"                report_text += f""{d['Trial Number']:<5} | {d['Mass (kg)']:<9} | {d['Applied Load Force (N)']:<9} | {d['Spring Extension (m)']}\\n"""
+            
+            st.download_button(
+"                label=""📥 Download Data Report File (.txt)"","
+"                data=report_text,"
+"                file_name=f""hookes_law_report_{student_name.replace(' ', '_')}.txt"","
+"                mime=""text/plain"""
+            )
